@@ -62,7 +62,6 @@ const Navbar: React.FC<NavbarProps> = ({
               <NavLink page="issue" label="Institution" />
               <NavLink page="verify" label="Verify" />
               <NavLink page="admin" label="Admin" />
-              <NavLink page="contracts" label="Contracts" />
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -119,7 +118,6 @@ const Navbar: React.FC<NavbarProps> = ({
             <NavLink page="issue" label="Institution" />
             <NavLink page="verify" label="Verify" />
             <NavLink page="admin" label="Admin" />
-            <NavLink page="contracts" label="Contracts" />
             
             <div className="border-t border-gray-100 my-2 pt-3">
               {isConnected && address ? (

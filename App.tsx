@@ -29,8 +29,6 @@ function AppContent() {
         return <VerifyCertificate />;
       case 'admin':
         return <AdminDashboard />;
-      case 'contracts':
-        return <ContractsPage />;
       default:
         return <Home setPage={setPage} />;
     }
