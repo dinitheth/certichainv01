@@ -7,7 +7,7 @@ import { CERTIFICATE_NFT_ADDRESS_DEFAULT, CERTIFICATE_NFT_ABI } from '../constan
 const IssueCertificate: React.FC = () => {
   const { isConnected } = useAccount();
   const { connectors, connect } = useConnect();
-  
+
   // Issuance State
   const { 
     data: issueHash, 
@@ -40,7 +40,7 @@ const IssueCertificate: React.FC = () => {
     enrollmentDate: '',
     ipfsHash: ''
   });
-  
+
   const [revokeData, setRevokeData] = useState({
     id: '',
     reason: ''
@@ -57,11 +57,11 @@ const IssueCertificate: React.FC = () => {
       const enrollmentTimestamp = Math.floor(new Date(formData.enrollmentDate).getTime() / 1000);
       const emailHash = keccak256(toHex(formData.studentEmail));
       const nameHash = keccak256(toHex(formData.studentName));
-      
-      // Compute privacy-preserving Data Hash for verification lookup
+
+      // ✅ FIXED: Compute privacy-preserving Data Hash for verification lookup
       // hash(nameHash + emailHash + course + enrollmentDate)
       const dataHash = keccak256(encodePacked(
-        ['string', 'string', 'string', 'uint256'],
+        ['bytes32', 'bytes32', 'string', 'uint256'],
         [nameHash, emailHash, formData.course, BigInt(enrollmentTimestamp)]
       ));
 
@@ -70,7 +70,7 @@ const IssueCertificate: React.FC = () => {
         abi: CERTIFICATE_NFT_ABI,
         functionName: 'issueCertificate',
         args: [
-          formData.studentAddress,
+          formData.studentAddress as `0x${string}`,
           nameHash,
           emailHash,
           formData.course,
@@ -80,7 +80,8 @@ const IssueCertificate: React.FC = () => {
         ],
       });
     } catch (err) {
-      console.error(err);
+      console.error('Error issuing certificate:', err);
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
     }
   };
 
@@ -90,13 +91,18 @@ const IssueCertificate: React.FC = () => {
       connect({ connector: connectors[0] });
       return;
     }
-    
-    writeRevoke({
-      address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
-      abi: CERTIFICATE_NFT_ABI,
-      functionName: 'revokeCertificate',
-      args: [BigInt(revokeData.id), revokeData.reason],
-    });
+
+    try {
+      writeRevoke({
+        address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
+        abi: CERTIFICATE_NFT_ABI,
+        functionName: 'revokeCertificate',
+        args: [BigInt(revokeData.id), revokeData.reason],
+      });
+    } catch (err) {
+      console.error('Error revoking certificate:', err);
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
+    }
   };
 
   const generateMetadata = () => {
@@ -104,7 +110,7 @@ const IssueCertificate: React.FC = () => {
         alert("Please fill in Student Name and Course first.");
         return;
     }
-    
+
     const enrollmentTimestamp = Math.floor(new Date(formData.enrollmentDate).getTime() / 1000);
     const metadata = {
         name: `Certificate: ${formData.course}`,
@@ -116,7 +122,7 @@ const IssueCertificate: React.FC = () => {
             { trait_type: "Enrollment Date", value: enrollmentTimestamp }
         ]
     };
-    
+
     const blob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

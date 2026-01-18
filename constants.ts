@@ -13,7 +13,7 @@ export const INSTITUTION_REGISTRY_ABI = [
 ] as const;
 
 export const CERTIFICATE_NFT_ABI = [
-  "function issueCertificate(address student, string memory nameHash, string memory emailHash, string memory course, uint256 enrollmentDate, string memory ipfsHash, bytes32 dataHash) external returns (uint256)",
+  "function issueCertificate(address student, bytes32 nameHash, bytes32 emailHash, string memory course, uint256 enrollmentDate, string memory ipfsHash, bytes32 dataHash) external returns (uint256)",
   "function revokeCertificate(uint256 tokenId, string memory reason) external",
   "function getCertificate(uint256 tokenId) external view returns (tuple(address issuer, string studentNameHash, string studentEmailHash, string course, uint256 issueDate, uint256 enrollmentDate, bool isValid, string ipfsHash, string revokeReason))",
   "function getCertificateByHash(bytes32 dataHash) external view returns (uint256)",
