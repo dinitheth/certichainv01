@@ -90,17 +90,17 @@ const VerifyCertificate: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-        <div className="p-8 bg-slate-50 border-b border-slate-200">
-          <div className="flex gap-4 justify-center mb-6">
+        <div className="p-4 sm:p-8 bg-slate-50 border-b border-slate-200">
+          <div className="flex flex-wrap gap-3 justify-center mb-6">
             <button 
                 onClick={() => { setMode('ID'); setHasSearched(false); }}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition ${mode === 'ID' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-full text-sm font-semibold transition ${mode === 'ID' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
             >
                 By Certificate ID
             </button>
             <button 
                 onClick={() => { setMode('HASH'); setHasSearched(false); }}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition ${mode === 'HASH' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-full text-sm font-semibold transition ${mode === 'HASH' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}
             >
                 By Data (Privacy Mode)
             </button>
@@ -165,16 +165,16 @@ const VerifyCertificate: React.FC = () => {
           </form>
         </div>
 
-        <div className="p-8 min-h-[300px] flex flex-col justify-center items-center">
+        <div className="p-4 sm:p-8 min-h-[300px] flex flex-col justify-center items-center">
           {!hasSearched && (
              <div className="text-center text-slate-400">
                <UserCheck className="h-16 w-16 mx-auto mb-4 opacity-20" />
-               <p>Enter details above to verify authenticity.</p>
+               <p className="px-4">Enter details above to verify authenticity.</p>
              </div>
           )}
 
           {error && (
-            <div className="text-red-500 flex flex-col items-center">
+            <div className="text-red-500 flex flex-col items-center px-4 text-center">
                <X className="h-12 w-12 mb-2" />
                <p className="font-medium">{error}</p>
             </div>
@@ -182,7 +182,7 @@ const VerifyCertificate: React.FC = () => {
 
           {certData && (
             <div className="w-full animate-fade-in-up">
-              <div className={`flex flex-col items-center justify-center mb-8 p-4 rounded-xl border ${
+              <div className={`flex flex-col items-center justify-center mb-8 p-4 rounded-xl border text-center ${
                   !certData.isValid 
                     ? 'bg-red-50 text-red-700 border-red-200' 
                     : !certData.isInstitutionActive 
@@ -224,8 +224,8 @@ const VerifyCertificate: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Issuer</h3>
-                    <p className="text-lg font-semibold text-slate-900 break-all font-mono text-base">{certData.issuer}</p>
-                    <div className="mt-1">
+                    <p className="text-sm sm:text-lg font-semibold text-slate-900 break-all font-mono leading-tight">{certData.issuer}</p>
+                    <div className="mt-1 text-center sm:text-left">
                         {certData.isInstitutionActive ? (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
                                 <CheckCircle className="h-3 w-3" /> Active Institution
@@ -245,7 +245,7 @@ const VerifyCertificate: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Student Name Hash</h3>
-                    <p className="text-lg font-semibold text-slate-900 break-all">{certData.studentName}</p>
+                    <p className="text-sm sm:text-lg font-semibold text-slate-900 break-all leading-tight">{certData.studentName}</p>
                   </div>
                 </div>
 

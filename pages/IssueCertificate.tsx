@@ -133,9 +133,9 @@ const IssueCertificate: React.FC = () => {
         <p className="text-slate-500 mt-2">Issue tamper-proof certificates on the Polygon blockchain.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Issue Form */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-6 text-indigo-600">
             <FileText className="h-6 w-6" />
             <h2 className="text-xl font-semibold">Issue New Certificate</h2>
