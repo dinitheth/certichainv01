@@ -6,8 +6,8 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import IssueCertificate from './pages/IssueCertificate';
 import VerifyCertificate from './pages/VerifyCertificate';
-import ContractsPage from './pages/ContractsPage';
 import AdminDashboard from './pages/AdminDashboard';
+import History from './pages/History';
 
 function AppContent() {
   const [page, setPage] = useState('home');
@@ -29,6 +29,8 @@ function AppContent() {
         return <VerifyCertificate />;
       case 'admin':
         return <AdminDashboard setPage={setPage} />;
+      case 'history':
+        return <History />;
       default:
         return <Home setPage={setPage} />;
     }
