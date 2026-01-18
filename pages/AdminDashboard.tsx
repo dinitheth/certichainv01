@@ -116,8 +116,18 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
 
   const isOwner = address && ownerAddress && (address.toLowerCase() === (ownerAddress as string).toLowerCase());
   const isAuthorizedInstitution = !!isCurrentAuthorized;
+  const isLoading = isOwnerLoading || isCurrentAuthorized === undefined;
 
-  if (!isOwner && !isAuthorizedInstitution) {
+  if (isLoading && isConnected) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-500 gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="font-medium animate-pulse">Verifying Authorization...</p>
+      </div>
+    );
+  }
+
+  if (isConnected && !isOwner && !isAuthorizedInstitution) {
     return (
       <div className="max-w-md mx-auto py-20 px-4 text-center">
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
