@@ -22,9 +22,20 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
     functionName: 'getAllInstitutions',
   });
 
+  // 3. Check if CURRENT wallet is authorized
+  const { data: isCurrentAuthorized } = useReadContract({
+    address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+    abi: INSTITUTION_REGISTRY_ABI,
+    functionName: 'isAuthorized',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    }
+  });
+
   const institutionList = (allInstitutions as string[]) || [];
 
-  // 3. Fetch Status for each institution
+  // 4. Fetch Status for each institution in the list
   const { data: statuses, refetch: refetchStatuses } = useReadContracts({
     contracts: institutionList.map((instAddr) => ({
       address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
@@ -104,7 +115,7 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
   }
 
   const isOwner = address && ownerAddress && (address.toLowerCase() === (ownerAddress as string).toLowerCase());
-  const isAuthorizedInstitution = statuses?.some(s => s.status === 'success' && s.result === true);
+  const isAuthorizedInstitution = !!isCurrentAuthorized;
 
   if (!isOwner && !isAuthorizedInstitution) {
     return (
