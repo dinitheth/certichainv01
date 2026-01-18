@@ -1,31 +1,60 @@
-import React, { useMemo } from 'react';
-import { useWatchContractEvents } from 'wagmi';
+import React, { useMemo, useState, useEffect } from 'react';
+import { usePublicClient } from 'wagmi';
 import { CERTIFICATE_NFT_ADDRESS_DEFAULT, CERTIFICATE_NFT_ABI } from '../constants';
-import { History as HistoryIcon, Clock, CheckCircle, XCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import { History as HistoryIcon, Clock, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 
 const History: React.FC = () => {
-  const [issueEvents, setIssueEvents] = React.useState<any[]>([]);
-  const [revokeEvents, setRevokeEvents] = React.useState<any[]>([]);
+  const [issueEvents, setIssueEvents] = useState<any[]>([]);
+  const [revokeEvents, setRevokeEvents] = useState<any[]>([]);
+  const publicClient = usePublicClient();
 
-  // Watch for Issue events
-  useWatchContractEvents({
-    address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
-    abi: CERTIFICATE_NFT_ABI,
-    eventName: 'CertificateIssued',
-    onEvents(events) {
-      setIssueEvents(prev => [...events, ...prev]);
-    },
-  });
+  useEffect(() => {
+    if (!publicClient) return;
 
-  // Watch for Revoke events
-  useWatchContractEvents({
-    address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
-    abi: CERTIFICATE_NFT_ABI,
-    eventName: 'CertificateRevoked',
-    onEvents(events) {
-      setRevokeEvents(prev => [...events, ...prev]);
-    },
-  });
+    const fetchEvents = async () => {
+      try {
+        const issues = await publicClient.getContractEvents({
+          address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
+          abi: CERTIFICATE_NFT_ABI,
+          eventName: 'CertificateIssued',
+          fromBlock: 'earliest'
+        });
+        setIssueEvents(issues);
+
+        const revokes = await publicClient.getContractEvents({
+          address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
+          abi: CERTIFICATE_NFT_ABI,
+          eventName: 'CertificateRevoked',
+          fromBlock: 'earliest'
+        });
+        setRevokeEvents(revokes);
+      } catch (err) {
+        console.error("Failed to fetch events:", err);
+      }
+    };
+
+    fetchEvents();
+
+    // Watch for new events
+    const unwatchIssue = publicClient.watchContractEvent({
+      address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
+      abi: CERTIFICATE_NFT_ABI,
+      eventName: 'CertificateIssued',
+      onLogs: (logs) => setIssueEvents(prev => [...logs, ...prev]),
+    });
+
+    const unwatchRevoke = publicClient.watchContractEvent({
+      address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
+      abi: CERTIFICATE_NFT_ABI,
+      eventName: 'CertificateRevoked',
+      onLogs: (logs) => setRevokeEvents(prev => [...logs, ...prev]),
+    });
+
+    return () => {
+      unwatchIssue();
+      unwatchRevoke();
+    };
+  }, [publicClient]);
 
   const allHistory = useMemo(() => {
     const issues = issueEvents.map(e => ({
