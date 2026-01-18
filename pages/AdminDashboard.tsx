@@ -3,7 +3,7 @@ import { useWriteContract, useWaitForTransactionReceipt, useAccount, useConnect,
 import { Building, Plus, Trash2, CheckCircle, ShieldAlert, Lock, Activity, XCircle, Search } from 'lucide-react';
 import { INSTITUTION_REGISTRY_ABI, REGISTRY_ADDRESS_DEFAULT } from '../constants';
 
-const AdminDashboard: React.FC = () => {
+const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage }) => {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const [newInstAddress, setNewInstAddress] = useState('');
@@ -108,13 +108,32 @@ const AdminDashboard: React.FC = () => {
   if (!isOwner) {
     return (
       <div className="max-w-md mx-auto py-20 px-4 text-center">
-        <ShieldAlert className="h-16 w-16 mx-auto text-red-400 mb-6" />
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
-        <p className="text-slate-500 mb-4">Your wallet is not authorized to view this page.</p>
-        <p className="text-xs text-slate-400 font-mono bg-slate-100 p-2 rounded">
-          Current: {address?.slice(0,6)}...{address?.slice(-4)} <br/>
-          Owner: {(ownerAddress as string)?.slice(0,6)}...{(ownerAddress as string)?.slice(-4)}
-        </p>
+        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+          <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert className="h-10 w-10 text-indigo-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Institution Access</h2>
+          <p className="text-slate-600 mb-8 leading-relaxed">
+            This administrative dashboard is reserved for authorized educational institutions and platform administrators.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => setPage('home')}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg"
+            >
+              Return to Homepage
+            </button>
+            <button
+              onClick={() => setPage('verify')}
+              className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold py-3.5 rounded-2xl transition-all border border-slate-200"
+            >
+              Verify a Certificate
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 font-mono mt-8 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            Connected: {address?.slice(0,6)}...{address?.slice(-4)}
+          </p>
+        </div>
       </div>
     );
   }
