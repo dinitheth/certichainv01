@@ -1,0 +1,5 @@
+{
+  "name": "CertiChain",
+  "description": "A decentralized application for issuing, verifying, and revoking academic certificates on the Polygon blockchain using Soulbound NFTs.",
+  "requestFramePermissions": []
+}
