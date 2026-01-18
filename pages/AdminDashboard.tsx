@@ -104,8 +104,9 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
   }
 
   const isOwner = address && ownerAddress && (address.toLowerCase() === (ownerAddress as string).toLowerCase());
+  const isAuthorizedInstitution = statuses?.some(s => s.status === 'success' && s.result === true);
 
-  if (!isOwner) {
+  if (!isOwner && !isAuthorizedInstitution) {
     return (
       <div className="max-w-md mx-auto py-20 px-4 text-center">
         <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
