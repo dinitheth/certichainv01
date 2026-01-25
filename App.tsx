@@ -8,6 +8,7 @@ import IssueCertificate from './pages/IssueCertificate';
 import VerifyCertificate from './pages/VerifyCertificate';
 import AdminDashboard from './pages/AdminDashboard';
 import History from './pages/History';
+import RegisterInstitution from './pages/RegisterInstitution';
 
 function AppContent() {
   const [page, setPage] = useState('home');
@@ -31,6 +32,8 @@ function AppContent() {
         return <AdminDashboard setPage={setPage} />;
       case 'history':
         return <History />;
+      case 'register':
+        return <RegisterInstitution setPage={setPage} />;
       default:
         return <Home setPage={setPage} />;
     }

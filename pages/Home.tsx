@@ -31,10 +31,10 @@ const Home: React.FC<Props> = ({ setPage }) => {
               Verify a Certificate
             </button>
             <button 
-              onClick={() => setPage('issue')}
+              onClick={() => setPage('register')}
               className="bg-indigo-600 border border-indigo-400 text-white font-bold py-4 px-8 rounded-full hover:bg-indigo-500 transition transform w-full sm:w-auto text-center"
             >
-              For Institutions
+              Register Institution
             </button>
           </div>
         </div>

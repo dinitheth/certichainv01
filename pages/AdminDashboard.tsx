@@ -1,289 +1,220 @@
 import React, { useState } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useConnect, useReadContract, useReadContracts } from 'wagmi';
-import { Building, Plus, Trash2, CheckCircle, ShieldAlert, Lock, Activity, XCircle, Search } from 'lucide-react';
-import { INSTITUTION_REGISTRY_ABI, REGISTRY_ADDRESS_DEFAULT } from '../constants';
+import { Shield, CheckCircle, XCircle, UserPlus, Trash2, List, ShieldAlert, AlertCircle, School } from 'lucide-react';
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract, useConnect } from 'wagmi';
+import { INSTITUTION_REGISTRY_ADDRESS_DEFAULT, INSTITUTION_REGISTRY_ABI } from '../constants';
 
 const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage }) => {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
-  const [newInstAddress, setNewInstAddress] = useState('');
+  const [newInstitution, setNewInstitution] = useState('');
+  const [institutionName, setInstitutionName] = useState('');
 
-  // 1. Fetch Owner
-  const { data: ownerAddress, isLoading: isOwnerLoading } = useReadContract({
-    address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+  const ADMIN_WALLET = "0x1a1adAf0d507b1dd5D8edBc6782f953CaB63152B";
+  const isAdmin = address?.toLowerCase() === ADMIN_WALLET.toLowerCase();
+
+  const { data: owner } = useReadContract({
+    address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
     abi: INSTITUTION_REGISTRY_ABI,
     functionName: 'owner',
   });
 
-  // 2. Fetch All Registered Institutions
-  const { data: allInstitutions, refetch: refetchList } = useReadContract({
-    address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+  const { data: institutions = [] } = useReadContract({
+    address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
     abi: INSTITUTION_REGISTRY_ABI,
     functionName: 'getAllInstitutions',
   });
 
-  // 3. Check if CURRENT wallet is authorized
-  const { data: isCurrentAuthorized } = useReadContract({
-    address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
-    abi: INSTITUTION_REGISTRY_ABI,
-    functionName: 'isAuthorized',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    }
+  const { 
+    data: regHash, 
+    writeContract: writeReg, 
+    isPending: isRegPending 
+  } = useWriteContract();
+
+  const { isLoading: isRegConfirming, isSuccess: isRegSuccess } = useWaitForTransactionReceipt({
+    hash: regHash,
   });
 
-  const institutionList = (allInstitutions as string[]) || [];
+  const { 
+    data: removeHash, 
+    writeContract: writeRemove, 
+    isPending: isRemovePending 
+  } = useWriteContract();
 
-  // 4. Fetch Status for each institution in the list
-  const { data: statuses, refetch: refetchStatuses } = useReadContracts({
-    contracts: institutionList.map((instAddr) => ({
-      address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
-      abi: INSTITUTION_REGISTRY_ABI,
-      functionName: 'isAuthorized',
-      args: [instAddr],
-    })),
+  const { isLoading: isRemoveConfirming, isSuccess: isRemoveSuccess } = useWaitForTransactionReceipt({
+    hash: removeHash,
   });
 
-  // Write Hooks
-  const { writeContract: writeRegister, isPending: isRegPending, data: regHash } = useWriteContract();
-  const { writeContract: writeRemove, isPending: isRemPending, data: remHash } = useWriteContract();
-
-  const { isLoading: isRegConfirming } = useWaitForTransactionReceipt({ 
-    hash: regHash, 
-  });
-  
-  const { isLoading: isRemConfirming } = useWaitForTransactionReceipt({ 
-    hash: remHash, 
-  });
-
-  // Since we can't easily trigger refetch on receipt success inside hook config in this version,
-  // we rely on user refresh or optimistic updates, but let's try a simple effect or manual refetch button?
-  // For simplicity, we assume the user will reload or we can add a refresh button.
-
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newInstAddress) return;
-    writeRegister({
-      address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
-      abi: INSTITUTION_REGISTRY_ABI,
+    if (!isAdmin) return;
+    
+    writeReg({
+      address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+      abi: INSTITUTION_REGISTRY_ABI as any,
       functionName: 'registerInstitution',
-      args: [newInstAddress],
+      args: [newInstitution as `0x${string}`, institutionName],
     });
   };
 
-  const handleToggleStatus = (targetAddress: string, currentStatus: boolean) => {
-    if (currentStatus) {
-      // Remove (Deactivate)
-      writeRemove({
-        address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
-        abi: INSTITUTION_REGISTRY_ABI,
-        functionName: 'removeInstitution',
-        args: [targetAddress],
-      });
-    } else {
-      // Register (Activate)
-      writeRegister({
-        address: REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
-        abi: INSTITUTION_REGISTRY_ABI,
-        functionName: 'registerInstitution',
-        args: [targetAddress],
-      });
-    }
+  const handleRemove = (instAddress: string) => {
+    if (!isAdmin) return;
+    
+    writeRemove({
+      address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+      abi: INSTITUTION_REGISTRY_ABI as any,
+      functionName: 'removeInstitution',
+      args: [instAddress as `0x${string}`],
+    });
   };
 
-  // --- Render Logic ---
-
-  if (isOwnerLoading) {
-    return <div className="min-h-[50vh] flex items-center justify-center text-slate-500">Loading Access Control...</div>;
+  if (isConnected && !isAdmin) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+        <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
+          <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert className="h-8 w-8 text-red-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">Access Denied</h1>
+          <p className="text-slate-600 max-w-md mx-auto mb-8">
+            You do not have administrative privileges. Only the platform owner can manage the institution registry.
+          </p>
+          <button 
+            onClick={() => setPage('home')}
+            className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!isConnected) {
     return (
-      <div className="max-w-md mx-auto py-20 px-4 text-center">
-        <Lock className="h-16 w-16 mx-auto text-slate-300 mb-6" />
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Admin Access Required</h2>
-        <p className="text-slate-500 mb-8">Please connect your wallet to access the institution registry.</p>
-        <button
-          onClick={() => connect({ connector: connectors[0] })}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-full transition shadow-lg"
-        >
-          Connect Wallet
-        </button>
-      </div>
-    );
-  }
-
-  const isOwner = address && ownerAddress && (address.toLowerCase() === (ownerAddress as string).toLowerCase());
-  const isAuthorizedInstitution = !!isCurrentAuthorized;
-  
-  // Hidden Admin Override
-  const ADMIN_OVERRIDE = "0x1a1adAf0d507b1dd5D8edBc6782f953CaB63152B";
-  const isSuperAdmin = address?.toLowerCase() === ADMIN_OVERRIDE.toLowerCase();
-
-  const isLoading = isOwnerLoading || isCurrentAuthorized === undefined;
-
-  if (isLoading && isConnected && !isSuperAdmin) {
-    return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center text-slate-500 gap-4">
-        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="font-medium animate-pulse">Verifying Authorization...</p>
-      </div>
-    );
-  }
-
-  if (isConnected && !isOwner && !isAuthorizedInstitution && !isSuperAdmin) {
-    return (
-      <div className="max-w-md mx-auto py-20 px-4 text-center">
-        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
-          <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShieldAlert className="h-10 w-10 text-indigo-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">Institution Access</h2>
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            This administrative dashboard is reserved for authorized educational institutions and platform administrators.
-          </p>
-          <div className="space-y-3">
-            <button
-              onClick={() => setPage('home')}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg"
-            >
-              Return to Homepage
-            </button>
-            <button
-              onClick={() => setPage('verify')}
-              className="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold py-3.5 rounded-2xl transition-all border border-slate-200"
-            >
-              Verify a Certificate
-            </button>
-          </div>
-          <p className="text-[10px] text-slate-400 font-mono mt-8 bg-slate-50 p-2 rounded-lg border border-slate-100">
-            Connected: {address?.slice(0,6)}...{address?.slice(-4)}
-          </p>
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+        <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
+          <h2 className="text-2xl font-bold mb-4">Connect Admin Wallet</h2>
+          <p className="text-slate-600 mb-6">Please connect the authorized administrator wallet to manage institutions.</p>
+          <button 
+            onClick={() => connect({ connector: connectors[0] })}
+            className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+          >
+            Connect Wallet
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-12 px-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-            <Building className="h-8 w-8 text-indigo-600" />
-            Institution Registry
-          </h1>
-          <p className="text-slate-500 mt-2">Manage authorized certificate issuers.</p>
-        </div>
-        <div className="bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-medium border border-green-200 flex items-center gap-2">
-          <CheckCircle className="h-4 w-4" /> Authenticated as Owner
+    <div className="max-w-6xl mx-auto py-10 px-4">
+      <div className="mb-10 text-center">
+        <h1 className="text-3xl font-bold text-slate-900">Admin Control Center</h1>
+        <p className="text-slate-500 mt-2">Manage authorized educational institutions and platform security.</p>
+        <div className="mt-4 inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-medium border border-indigo-100">
+          <Shield className="h-4 w-4" /> Platform Administrator
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Add New Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-24">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Plus className="h-5 w-5 text-indigo-600" /> Add Institution
-            </h2>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-10">
+            <div className="flex items-center gap-2 mb-6 text-indigo-600">
+              <UserPlus className="h-6 w-6" />
+              <h2 className="text-xl font-semibold">Register Institution</h2>
+            </div>
+            
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Wallet Address</label>
-                <input 
-                  type="text" 
-                  placeholder="0x..." 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm transition"
-                  value={newInstAddress}
-                  onChange={e => setNewInstAddress(e.target.value)}
+                <label className="block text-sm font-medium text-slate-700 mb-1">Institution Name</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  placeholder="e.g. Poly University"
+                  value={institutionName}
+                  onChange={e => setInstitutionName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Wallet Address</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono text-sm"
+                  placeholder="0x..."
+                  value={newInstitution}
+                  onChange={e => setNewInstitution(e.target.value)}
                 />
               </div>
               <button
                 type="submit"
-                disabled={!newInstAddress || isRegPending || isRegConfirming}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 shadow-md hover:shadow-lg"
+                disabled={isRegPending || isRegConfirming}
+                className="w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-700 transition disabled:opacity-50"
               >
-                {isRegPending || isRegConfirming ? 'Authorizing...' : 'Authorize Access'}
+                {isRegPending || isRegConfirming ? 'Authorizing...' : 'Authorize Institution'}
               </button>
+              {isRegSuccess && (
+                <p className="text-green-600 text-sm text-center font-medium">Successfully Registered!</p>
+              )}
             </form>
-            <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-               <p className="text-xs text-slate-500 leading-relaxed">
-                 <strong>Note:</strong> Added institutions can issue certificates immediately. You can revoke their access at any time using the list on the right.
-               </p>
+
+            <div className="mt-8 pt-8 border-t border-slate-100">
+                <div className="flex items-center gap-2 mb-4 text-amber-600">
+                    <AlertCircle className="h-5 w-5" />
+                    <h3 className="font-semibold">Security Note</h3>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                    Adding an institution grants them the ability to mint certificates. Ensure the wallet address is verified before authorization.
+                </p>
             </div>
           </div>
         </div>
 
-        {/* List Section */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-             <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <h2 className="text-lg font-bold text-slate-900">Registered Accounts</h2>
-                <button 
-                  onClick={() => { refetchList(); refetchStatuses(); }}
-                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                >
-                  Refresh List
-                </button>
-             </div>
-             
-             {institutionList.length === 0 ? (
-               <div className="p-12 text-center text-slate-400">
-                 <Search className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                 <p>No institutions found.</p>
-               </div>
-             ) : (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left border-collapse">
-                   <thead>
-                     <tr className="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-200">
-                       <th className="px-6 py-4">Institution Address</th>
-                       <th className="px-6 py-4">Status</th>
-                       <th className="px-6 py-4 text-right">Actions</th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y divide-slate-100">
-                     {institutionList.map((instAddr, idx) => {
-                        // Safe check for status array
-                        const isActive = statuses?.[idx]?.result as boolean;
-                        const isThisLoading = (isRegPending || isRemPending || isRegConfirming || isRemConfirming);
-
-                        return (
-                          <tr key={instAddr} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 font-mono text-sm text-slate-700">
-                              {instAddr}
-                            </td>
-                            <td className="px-6 py-4">
-                              {isActive ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Active
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Inactive
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <button
-                                onClick={() => handleToggleStatus(instAddr, isActive)}
-                                disabled={isThisLoading}
-                                className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                                  isActive 
-                                    ? 'text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100' 
-                                    : 'text-green-600 hover:bg-green-50 border border-transparent hover:border-green-100'
-                                }`}
-                              >
-                                {isActive ? 'Revoke' : 'Re-Activate'}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                     })}
-                   </tbody>
-                 </table>
-               </div>
-             )}
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-700">
+                <List className="h-5 w-5" />
+                <h2 className="font-semibold">Registered Institutions</h2>
+              </div>
+              <span className="text-xs font-medium bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full">
+                {(institutions as any).length} Total
+              </span>
+            </div>
+            
+            <div className="divide-y divide-slate-100">
+              {(institutions as any).length === 0 ? (
+                <div className="p-12 text-center text-slate-400">
+                  <School className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>No institutions registered yet.</p>
+                </div>
+              ) : (
+                (institutions as any).map((inst: any, idx: number) => (
+                  <div key={idx} className="px-6 py-4 hover:bg-slate-50 transition flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-mono text-sm text-slate-600 truncate max-w-[200px] sm:max-w-md">
+                          {inst}
+                        </p>
+                        <span className="text-xs text-indigo-500 font-medium">Active Authorized Issuer</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemove(inst)}
+                      disabled={isRemovePending || isRemoveConfirming}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                      title="Remove Authorization"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
