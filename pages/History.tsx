@@ -13,11 +13,14 @@ const History: React.FC = () => {
 
     const fetchEvents = async () => {
       try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const fromBlock = currentBlock > 10000n ? currentBlock - 10000n : 0n;
+        
         const issues = await publicClient.getContractEvents({
           address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
           abi: CERTIFICATE_NFT_ABI,
           eventName: 'CertificateIssued',
-          fromBlock: 'earliest'
+          fromBlock: fromBlock
         });
         setIssueEvents(issues);
 
@@ -25,7 +28,7 @@ const History: React.FC = () => {
           address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
           abi: CERTIFICATE_NFT_ABI,
           eventName: 'CertificateRevoked',
-          fromBlock: 'earliest'
+          fromBlock: fromBlock
         });
         setRevokeEvents(revokes);
       } catch (err) {

@@ -146,7 +146,7 @@ export const CERTIFICATE_NFT_ABI = [
       { name: "tokenId", type: "uint256", indexed: true },
       { name: "issuer", type: "address", indexed: true },
       { name: "student", type: "address", indexed: true },
-      { name: "dataHash", type: "bytes32", indexed: true }
+      { name: "dataHash", type: "bytes32", indexed: false }
     ]
   },
   {
