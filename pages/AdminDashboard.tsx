@@ -50,7 +50,8 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
     data: regHash, 
     writeContract: writeReg, 
     isPending: isRegPending,
-    isSuccess: isRegWriteSuccess
+    isSuccess: isRegWriteSuccess,
+    error: regError
   } = useWriteContract();
 
   const { isLoading: isRegConfirming, isSuccess: isRegSuccess } = useWaitForTransactionReceipt({
@@ -281,6 +282,12 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
               </button>
               {isRegSuccess && !selectedRegistration && (
                 <p className="text-green-600 text-sm text-center font-medium">Successfully Registered!</p>
+              )}
+              {regError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm mt-2">
+                  <p className="font-medium">Transaction Failed</p>
+                  <p className="text-xs mt-1 break-words">{regError.message.slice(0, 200)}</p>
+                </div>
               )}
             </form>
 
