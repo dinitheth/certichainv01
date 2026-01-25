@@ -4,25 +4,159 @@ export const INSTITUTION_REGISTRY_ADDRESS_DEFAULT = "0x4fDc794e30A89421E256EC3F2
 export const CERTIFICATE_NFT_ADDRESS_DEFAULT = "0x43236A83599Ce79557ad218ca1aF6109B2400d31";
 
 export const INSTITUTION_REGISTRY_ABI = [
-  "function registerInstitution(address _institution, string memory _name) external",
-  "function removeInstitution(address _institution) external",
-  "function getInstitution(address _institution) external view returns (string memory name, bool isActive)",
-  "function isAuthorized(address _institution) external view returns (bool)",
-  "function owner() external view returns (address)",
-  "function getAllInstitutions() external view returns (address[])",
-  "event InstitutionRegistered(address indexed institution, string name)",
-  "event InstitutionRemoved(address indexed institution)"
+  {
+    name: "registerInstitution",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_institution", type: "address" },
+      { name: "_name", type: "string" }
+    ],
+    outputs: []
+  },
+  {
+    name: "removeInstitution",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_institution", type: "address" }],
+    outputs: []
+  },
+  {
+    name: "getInstitution",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "_institution", type: "address" }],
+    outputs: [
+      { name: "name", type: "string" },
+      { name: "isActive", type: "bool" }
+    ]
+  },
+  {
+    name: "isAuthorized",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "_institution", type: "address" }],
+    outputs: [{ name: "", type: "bool" }]
+  },
+  {
+    name: "owner",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }]
+  },
+  {
+    name: "getAllInstitutions",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address[]" }]
+  },
+  {
+    name: "InstitutionRegistered",
+    type: "event",
+    inputs: [
+      { name: "institution", type: "address", indexed: true },
+      { name: "name", type: "string", indexed: false }
+    ]
+  },
+  {
+    name: "InstitutionRemoved",
+    type: "event",
+    inputs: [{ name: "institution", type: "address", indexed: true }]
+  }
 ] as const;
 
 export const CERTIFICATE_NFT_ABI = [
-  "function issueCertificate(address student, bytes32 nameHash, bytes32 emailHash, string memory course, uint256 enrollmentDate, string memory ipfsHash, bytes32 dataHash) external returns (uint256)",
-  "function revokeCertificate(uint256 tokenId, string memory reason) external",
-  "function getCertificate(uint256 tokenId) external view returns (tuple(address issuer, string studentNameHash, string studentEmailHash, string course, uint256 issueDate, uint256 enrollmentDate, bool isValid, string ipfsHash, string revokeReason))",
-  "function getCertificateByHash(bytes32 dataHash) external view returns (uint256)",
-  "function ownerOf(uint256 tokenId) external view returns (address)",
-  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-  "event CertificateIssued(uint256 indexed tokenId, address indexed issuer, address indexed student, bytes32 indexed dataHash)",
-  "event CertificateRevoked(uint256 indexed tokenId, string reason)"
+  {
+    name: "issueCertificate",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "student", type: "address" },
+      { name: "nameHash", type: "bytes32" },
+      { name: "emailHash", type: "bytes32" },
+      { name: "course", type: "string" },
+      { name: "enrollmentDate", type: "uint256" },
+      { name: "ipfsHash", type: "string" },
+      { name: "dataHash", type: "bytes32" }
+    ],
+    outputs: [{ name: "", type: "uint256" }]
+  },
+  {
+    name: "revokeCertificate",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "reason", type: "string" }
+    ],
+    outputs: []
+  },
+  {
+    name: "getCertificate",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "issuer", type: "address" },
+          { name: "studentNameHash", type: "string" },
+          { name: "studentEmailHash", type: "string" },
+          { name: "course", type: "string" },
+          { name: "issueDate", type: "uint256" },
+          { name: "enrollmentDate", type: "uint256" },
+          { name: "isValid", type: "bool" },
+          { name: "ipfsHash", type: "string" },
+          { name: "revokeReason", type: "string" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "getCertificateByHash",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "dataHash", type: "bytes32" }],
+    outputs: [{ name: "", type: "uint256" }]
+  },
+  {
+    name: "ownerOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }]
+  },
+  {
+    name: "Transfer",
+    type: "event",
+    inputs: [
+      { name: "from", type: "address", indexed: true },
+      { name: "to", type: "address", indexed: true },
+      { name: "tokenId", type: "uint256", indexed: true }
+    ]
+  },
+  {
+    name: "CertificateIssued",
+    type: "event",
+    inputs: [
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "issuer", type: "address", indexed: true },
+      { name: "student", type: "address", indexed: true },
+      { name: "dataHash", type: "bytes32", indexed: true }
+    ]
+  },
+  {
+    name: "CertificateRevoked",
+    type: "event",
+    inputs: [
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "reason", type: "string", indexed: false }
+    ]
+  }
 ] as const;
 
 // Mock data for simulation mode (Legacy/Reference)
