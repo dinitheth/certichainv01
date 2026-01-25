@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, FileText, CheckCircle, AlertCircle, Calendar, Mail, Download, Hash, Lock } from 'lucide-react';
+import { Shield, FileText, CheckCircle, AlertCircle, Calendar, Mail, Download, Lock, Clock } from 'lucide-react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useConnect, useReadContract } from 'wagmi';
 import { keccak256, toHex, encodePacked } from 'viem';
 import { CERTIFICATE_NFT_ADDRESS_DEFAULT, CERTIFICATE_NFT_ABI, INSTITUTION_REGISTRY_ADDRESS_DEFAULT, INSTITUTION_REGISTRY_ABI } from '../constants';
+import { checkRegistration, InstitutionRegistration } from '../src/api';
 
-const IssueCertificate: React.FC = () => {
+const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPage }) => {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
+  const [dbRegistration, setDbRegistration] = useState<InstitutionRegistration | null>(null);
+  const [isCheckingDb, setIsCheckingDb] = useState(true);
 
-  // Check if the connected address is a registered institution
+  // Check database registration status
+  useEffect(() => {
+    if (address) {
+      setIsCheckingDb(true);
+      checkRegistration(address)
+        .then(reg => setDbRegistration(reg))
+        .catch(console.error)
+        .finally(() => setIsCheckingDb(false));
+    } else {
+      setIsCheckingDb(false);
+    }
+  }, [address]);
+
+  // Check if the connected address is a registered institution on-chain
   const { data: institutionInfo, isLoading: isCheckingAuth } = useReadContract({
     address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
     abi: INSTITUTION_REGISTRY_ABI,
@@ -19,7 +35,7 @@ const IssueCertificate: React.FC = () => {
     }
   });
 
-  const isAuthorized = institutionInfo && (institutionInfo as any)[1] === true; // isActive check
+  const isAuthorized = institutionInfo && (institutionInfo as any)[1] === true;
 
   // Issuance State
   const { 
@@ -153,23 +169,66 @@ const IssueCertificate: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (isConnected && !isAuthorized && !isCheckingAuth) {
+  // Show loading while checking
+  if (isCheckingAuth || isCheckingDb) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+        <div className="animate-spin w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-slate-600">Verifying institution status...</p>
+      </div>
+    );
+  }
+
+  // If not authorized on-chain
+  if (isConnected && !isAuthorized) {
+    // Check if they have a pending registration
+    if (dbRegistration && dbRegistration.status === 'pending') {
+      return (
+        <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+          <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
+            <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Clock className="h-8 w-8 text-amber-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-4">Application Pending</h1>
+            <p className="text-slate-600 max-w-md mx-auto mb-8">
+              Your registration for <strong>{dbRegistration.name}</strong> is currently under review. 
+              You'll gain access to the Institution Dashboard once approved.
+            </p>
+            <button 
+              onClick={() => setPage('home')}
+              className="bg-slate-100 text-slate-700 px-8 py-3 rounded-xl font-semibold hover:bg-slate-200 transition"
+            >
+              Back to Home
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // No registration - redirect to registration page
     return (
       <div className="max-w-4xl mx-auto py-20 px-4 text-center">
         <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
-          <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock className="h-8 w-8 text-amber-600" />
+          <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="h-8 w-8 text-indigo-600" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">Institution Access Only</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">Institution Registration Required</h1>
           <p className="text-slate-600 max-w-md mx-auto mb-8">
-            This dashboard is restricted to authorized educational institutions. 
-            Your wallet address ({address?.slice(0, 6)}...{address?.slice(-4)}) is not currently registered.
+            To issue certificates, your institution must first be registered and approved on the CertiChain network.
           </p>
-          <div className="flex flex-col gap-4 max-w-xs mx-auto text-sm">
-             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-left">
-                <p className="font-semibold text-slate-700 mb-1">How to gain access?</p>
-                <p className="text-slate-500">Contact the platform administrator to have your institution's wallet address added to the registry.</p>
-             </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button 
+              onClick={() => setPage('register')}
+              className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+            >
+              Register Your Institution
+            </button>
+            <button 
+              onClick={() => setPage('home')}
+              className="bg-slate-100 text-slate-700 px-8 py-3 rounded-xl font-semibold hover:bg-slate-200 transition"
+            >
+              Back to Home
+            </button>
           </div>
         </div>
       </div>

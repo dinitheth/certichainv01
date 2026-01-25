@@ -25,7 +25,7 @@ function AppContent() {
       case 'home':
         return <Home setPage={setPage} />;
       case 'issue':
-        return <IssueCertificate />;
+        return <IssueCertificate setPage={setPage} />;
       case 'verify':
         return <VerifyCertificate />;
       case 'admin':

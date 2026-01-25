@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { School, CheckCircle, AlertCircle, Send, Globe, Mail, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { School, CheckCircle, AlertCircle, Send, Globe, Mail, MapPin, Clock, XCircle } from 'lucide-react';
 import { useAccount, useConnect } from 'wagmi';
+import { submitRegistration, checkRegistration, InstitutionRegistration } from '../src/api';
 
 const RegisterInstitution: React.FC<{ setPage: (page: string) => void }> = ({ setPage }) => {
   const { address, isConnected } = useAccount();
@@ -14,20 +15,86 @@ const RegisterInstitution: React.FC<{ setPage: (page: string) => void }> = ({ se
     description: ''
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [existingRegistration, setExistingRegistration] = useState<InstitutionRegistration | null>(null);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (address) {
+      checkRegistration(address).then(reg => {
+        setExistingRegistration(reg);
+      }).catch(console.error);
+    }
+  }, [address]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isConnected) {
+    if (!isConnected || !address) {
       connect({ connector: connectors[0] });
       return;
     }
     
-    // In a production app, this would send to a database/backend
-    // For now, we simulate a successful registration request
-    console.log('Registration Request:', { ...formData, wallet: address });
-    setIsSubmitted(true);
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await submitRegistration({
+        ...formData,
+        walletAddress: address
+      });
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit registration');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (existingRegistration) {
+    const isPending = existingRegistration.status === 'pending';
+    const isApproved = existingRegistration.status === 'approved';
+    const isRejected = existingRegistration.status === 'rejected';
+
+    return (
+      <div className="max-w-2xl mx-auto py-20 px-4 text-center">
+        <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+            isPending ? 'bg-amber-50' : isApproved ? 'bg-green-50' : 'bg-red-50'
+          }`}>
+            {isPending && <Clock className="h-10 w-10 text-amber-600" />}
+            {isApproved && <CheckCircle className="h-10 w-10 text-green-600" />}
+            {isRejected && <XCircle className="h-10 w-10 text-red-600" />}
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">
+            {isPending && 'Application Pending'}
+            {isApproved && 'Application Approved!'}
+            {isRejected && 'Application Rejected'}
+          </h1>
+          <p className="text-slate-600 mb-6">
+            {isPending && `Your registration for "${existingRegistration.name}" is currently under review.`}
+            {isApproved && `Welcome! "${existingRegistration.name}" has been approved to issue certificates.`}
+            {isRejected && `Unfortunately, your registration for "${existingRegistration.name}" was not approved.`}
+          </p>
+          {isApproved ? (
+            <button 
+              onClick={() => setPage('issue')}
+              className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+            >
+              Go to Institution Dashboard
+            </button>
+          ) : (
+            <button 
+              onClick={() => setPage('home')}
+              className="bg-slate-100 text-slate-700 px-8 py-3 rounded-xl font-semibold hover:bg-slate-200 transition"
+            >
+              Back to Home
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
@@ -142,11 +209,18 @@ const RegisterInstitution: React.FC<{ setPage: (page: string) => void }> = ({ se
               </p>
             </div>
 
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-md hover:shadow-xl flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-md hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {!isConnected ? 'Connect Wallet to Register' : (
+              {!isConnected ? 'Connect Wallet to Register' : isSubmitting ? 'Submitting...' : (
                 <>
                   <Send className="h-5 w-5" />
                   Submit Registration Request

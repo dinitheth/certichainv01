@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
-import { Shield, CheckCircle, XCircle, UserPlus, Trash2, List, ShieldAlert, AlertCircle, School } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, CheckCircle, UserPlus, Trash2, List, ShieldAlert, AlertCircle, School, Clock, XCircle, Globe, Mail, MapPin, ExternalLink } from 'lucide-react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract, useConnect } from 'wagmi';
 import { INSTITUTION_REGISTRY_ADDRESS_DEFAULT, INSTITUTION_REGISTRY_ABI } from '../constants';
+import { getPendingRegistrations, updateRegistrationStatus, InstitutionRegistration } from '../src/api';
 
 const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage }) => {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const [newInstitution, setNewInstitution] = useState('');
   const [institutionName, setInstitutionName] = useState('');
+  const [pendingRegistrations, setPendingRegistrations] = useState<InstitutionRegistration[]>([]);
+  const [selectedRegistration, setSelectedRegistration] = useState<InstitutionRegistration | null>(null);
+  const [isLoadingPending, setIsLoadingPending] = useState(true);
 
   const ADMIN_WALLET = "0x1a1adAf0d507b1dd5D8edBc6782f953CaB63152B";
   const isAdmin = address?.toLowerCase() === ADMIN_WALLET.toLowerCase();
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadPendingRegistrations();
+    }
+  }, [isAdmin]);
+
+  const loadPendingRegistrations = async () => {
+    setIsLoadingPending(true);
+    try {
+      const regs = await getPendingRegistrations();
+      setPendingRegistrations(regs);
+    } catch (error) {
+      console.error('Failed to load pending registrations:', error);
+    } finally {
+      setIsLoadingPending(false);
+    }
+  };
 
   const { data: owner } = useReadContract({
     address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
@@ -27,7 +49,8 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
   const { 
     data: regHash, 
     writeContract: writeReg, 
-    isPending: isRegPending 
+    isPending: isRegPending,
+    isSuccess: isRegWriteSuccess
   } = useWriteContract();
 
   const { isLoading: isRegConfirming, isSuccess: isRegSuccess } = useWaitForTransactionReceipt({
@@ -44,6 +67,20 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
     hash: removeHash,
   });
 
+  // When blockchain registration succeeds, update DB status
+  useEffect(() => {
+    if (isRegSuccess && selectedRegistration) {
+      updateRegistrationStatus(selectedRegistration.id, 'approved')
+        .then(() => {
+          loadPendingRegistrations();
+          setSelectedRegistration(null);
+          setNewInstitution('');
+          setInstitutionName('');
+        })
+        .catch(console.error);
+    }
+  }, [isRegSuccess]);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) return;
@@ -54,6 +91,28 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
       functionName: 'registerInstitution',
       args: [newInstitution as `0x${string}`, institutionName],
     });
+  };
+
+  const handleApproveRegistration = (registration: InstitutionRegistration) => {
+    setSelectedRegistration(registration);
+    setNewInstitution(registration.walletAddress);
+    setInstitutionName(registration.name);
+    
+    writeReg({
+      address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+      abi: INSTITUTION_REGISTRY_ABI as any,
+      functionName: 'registerInstitution',
+      args: [registration.walletAddress as `0x${string}`, registration.name],
+    });
+  };
+
+  const handleRejectRegistration = async (registration: InstitutionRegistration) => {
+    try {
+      await updateRegistrationStatus(registration.id, 'rejected');
+      loadPendingRegistrations();
+    } catch (error) {
+      console.error('Failed to reject registration:', error);
+    }
   };
 
   const handleRemove = (instAddress: string) => {
@@ -107,21 +166,87 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4">
+    <div className="max-w-7xl mx-auto py-10 px-4">
       <div className="mb-10 text-center">
         <h1 className="text-3xl font-bold text-slate-900">Admin Control Center</h1>
-        <p className="text-slate-500 mt-2">Manage authorized educational institutions and platform security.</p>
+        <p className="text-slate-500 mt-2">Manage authorized educational institutions and registration requests.</p>
         <div className="mt-4 inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-medium border border-indigo-100">
           <Shield className="h-4 w-4" /> Platform Administrator
         </div>
       </div>
+
+      {/* Pending Registrations Section */}
+      {pendingRegistrations.length > 0 && (
+        <div className="mb-10">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-amber-200 flex items-center justify-between bg-amber-100/50">
+              <div className="flex items-center gap-2 text-amber-800">
+                <Clock className="h-5 w-5" />
+                <h2 className="font-semibold">Pending Registration Requests</h2>
+              </div>
+              <span className="text-xs font-medium bg-amber-200 text-amber-800 px-2.5 py-1 rounded-full">
+                {pendingRegistrations.length} Awaiting Review
+              </span>
+            </div>
+            <div className="divide-y divide-amber-100">
+              {pendingRegistrations.map((reg) => (
+                <div key={reg.id} className="p-6 bg-white hover:bg-amber-50/50 transition">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2">{reg.name}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-slate-400" />
+                          <span className="truncate">{reg.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-slate-400" />
+                          <a href={reg.website} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline truncate flex items-center gap-1">
+                            {reg.website.replace('https://', '').slice(0, 30)}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-slate-400" />
+                          <span>{reg.location}</span>
+                        </div>
+                        <div className="font-mono text-xs bg-slate-100 px-2 py-1 rounded truncate">
+                          {reg.walletAddress.slice(0, 10)}...{reg.walletAddress.slice(-8)}
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-500 mt-2 line-clamp-2">{reg.description}</p>
+                    </div>
+                    <div className="flex gap-3 shrink-0">
+                      <button
+                        onClick={() => handleApproveRegistration(reg)}
+                        disabled={isRegPending || isRegConfirming}
+                        className="bg-green-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        {(isRegPending || isRegConfirming) && selectedRegistration?.id === reg.id ? 'Approving...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleRejectRegistration(reg)}
+                        className="bg-red-50 text-red-600 px-6 py-2 rounded-xl font-medium hover:bg-red-100 transition border border-red-200 flex items-center gap-2"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-10">
             <div className="flex items-center gap-2 mb-6 text-indigo-600">
               <UserPlus className="h-6 w-6" />
-              <h2 className="text-xl font-semibold">Register Institution</h2>
+              <h2 className="text-xl font-semibold">Manual Registration</h2>
             </div>
             
             <form onSubmit={handleRegister} className="space-y-4">
@@ -154,7 +279,7 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
               >
                 {isRegPending || isRegConfirming ? 'Authorizing...' : 'Authorize Institution'}
               </button>
-              {isRegSuccess && (
+              {isRegSuccess && !selectedRegistration && (
                 <p className="text-green-600 text-sm text-center font-medium">Successfully Registered!</p>
               )}
             </form>
@@ -176,7 +301,7 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-700">
                 <List className="h-5 w-5" />
-                <h2 className="font-semibold">Registered Institutions</h2>
+                <h2 className="font-semibold">Registered Institutions (On-Chain)</h2>
               </div>
               <span className="text-xs font-medium bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full">
                 {(institutions as any).length} Total

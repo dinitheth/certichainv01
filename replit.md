@@ -41,12 +41,27 @@ Preferred communication style: Simple, everyday language.
 - Full metadata can be stored on IPFS with only the CID stored on-chain
 - Verification can be done by reconstructing the hash from original data
 
+### Backend Architecture
+- **Server**: Express.js API server running on port 3001
+- **Database**: PostgreSQL with Drizzle ORM
+- **API Proxy**: Vite proxies `/api` requests to the backend server
+
+### Institution Registration Workflow
+1. Institution submits registration form with name, email, website, location, description, and wallet address
+2. Registration stored in PostgreSQL with status "pending"
+3. Admin (hardcoded wallet: 0x1a1adAf0d507b1dd5D8edBc6782f953CaB63152B) reviews pending registrations
+4. On approval, admin triggers on-chain authorization via InstitutionRegistry contract
+5. After blockchain confirmation, database status updated to "approved"
+6. Institution can now access the certificate issuance dashboard
+
 ### Page Structure
 - **Home**: Landing page with product overview
-- **IssueCertificate**: Institution-facing form for minting certificates
+- **RegisterInstitution**: Public registration form for new institutions
+- **IssueCertificate**: Institution-facing dashboard (redirects to registration if not authorized)
 - **VerifyCertificate**: Public verification by token ID or data hash
-- **AdminDashboard**: Owner-only institution management
+- **AdminDashboard**: Admin-only institution management with pending registration review
 - **ContractsPage**: Smart contract source code viewer
+- **History**: Blockchain event history viewer
 
 ## External Dependencies
 
@@ -59,10 +74,24 @@ Preferred communication style: Simple, everyday language.
 - @tanstack/react-query: Async state management
 - ethers: Utility library (v6.11.1)
 - lucide-react: Icon library
+- drizzle-orm + drizzle-kit: Database ORM and migration tools
+- express + cors: Backend API server
+- zod + drizzle-zod: Schema validation
 
 ### Environment Variables
 - `GEMINI_API_KEY`: Referenced in vite.config.ts (purpose unclear from codebase, possibly for AI features)
 
 ### Contract Addresses
-- Contracts use placeholder addresses (0x000...000) in constants.ts
-- Actual deployed addresses must be configured before production use
+- InstitutionRegistry: 0x4fDc794e30A89421E256EC3F288Fc0fD471fd16E
+- CertificateNFT: 0x43236A83599Ce79557ad218ca1aF6109B2400d31
+
+### Database Schema
+- **institution_registrations**: Stores registration requests
+  - id: Serial primary key
+  - name, email, website, location, description: Institution details
+  - walletAddress: Ethereum wallet (unique, lowercase)
+  - status: "pending" | "approved" | "rejected"
+  - createdAt, reviewedAt: Timestamps
+
+### Admin Access
+- Hardcoded admin wallet: 0x1a1adAf0d507b1dd5D8edBc6782f953CaB63152B
