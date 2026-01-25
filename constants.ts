@@ -104,8 +104,8 @@ export const CERTIFICATE_NFT_ABI = [
         type: "tuple",
         components: [
           { name: "issuer", type: "address" },
-          { name: "studentNameHash", type: "string" },
-          { name: "studentEmailHash", type: "string" },
+          { name: "studentNameHash", type: "bytes32" },
+          { name: "studentEmailHash", type: "bytes32" },
           { name: "course", type: "string" },
           { name: "issueDate", type: "uint256" },
           { name: "enrollmentDate", type: "uint256" },
