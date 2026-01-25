@@ -67,7 +67,7 @@ const IssueCertificate: React.FC = () => {
 
       writeIssue({
         address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
-        abi: CERTIFICATE_NFT_ABI,
+        abi: CERTIFICATE_NFT_ABI as any,
         functionName: 'issueCertificate',
         args: [
           formData.studentAddress as `0x${string}`,
@@ -95,7 +95,7 @@ const IssueCertificate: React.FC = () => {
     try {
       writeRevoke({
         address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
-        abi: CERTIFICATE_NFT_ABI,
+        abi: CERTIFICATE_NFT_ABI as any,
         functionName: 'revokeCertificate',
         args: [BigInt(revokeData.id), revokeData.reason],
       });
