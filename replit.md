@@ -82,8 +82,8 @@ Preferred communication style: Simple, everyday language.
 - `GEMINI_API_KEY`: Referenced in vite.config.ts (purpose unclear from codebase, possibly for AI features)
 
 ### Contract Addresses
-- InstitutionRegistry: 0x4fDc794e30A89421E256EC3F288Fc0fD471fd16E
-- CertificateNFT: 0x43236A83599Ce79557ad218ca1aF6109B2400d31
+- InstitutionRegistry: 0x36b0FC46a71C29BCae123B3a11a3B5222d7E53b5
+- CertificateNFT: 0xEDE1ade75d0FBE2Ade2001966966Efd190b90C20
 
 ### Database Schema
 - **institution_registrations**: Stores registration requests
