@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle, UserPlus, Trash2, List, ShieldAlert, AlertCircle, School, Clock, XCircle, Globe, Mail, MapPin, ExternalLink } from 'lucide-react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract, useConnect } from 'wagmi';
 import { polygonAmoy } from 'wagmi/chains';
+import { parseGwei } from 'viem';
 import { INSTITUTION_REGISTRY_ADDRESS_DEFAULT, INSTITUTION_REGISTRY_ABI } from '../constants';
 import { getPendingRegistrations, updateRegistrationStatus, InstitutionRegistration } from '../src/api';
 
@@ -94,6 +95,8 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
       args: [newInstitution as `0x${string}`, institutionName],
       chain: polygonAmoy,
       account: address,
+      maxFeePerGas: parseGwei('50'),
+      maxPriorityFeePerGas: parseGwei('30'),
     });
   };
 
@@ -110,6 +113,8 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
       args: [registration.walletAddress as `0x${string}`, registration.name],
       chain: polygonAmoy,
       account: address,
+      maxFeePerGas: parseGwei('50'),
+      maxPriorityFeePerGas: parseGwei('30'),
     });
   };
 
@@ -132,6 +137,8 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
       args: [instAddress as `0x${string}`],
       chain: polygonAmoy,
       account: address,
+      maxFeePerGas: parseGwei('50'),
+      maxPriorityFeePerGas: parseGwei('30'),
     });
   };
 
