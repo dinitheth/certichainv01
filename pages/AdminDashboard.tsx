@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle, UserPlus, Trash2, List, ShieldAlert, AlertCircle, School, Clock, XCircle, Globe, Mail, MapPin, ExternalLink } from 'lucide-react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract, useConnect } from 'wagmi';
+import { polygonAmoy } from 'wagmi/chains';
 import { INSTITUTION_REGISTRY_ADDRESS_DEFAULT, INSTITUTION_REGISTRY_ABI } from '../constants';
 import { getPendingRegistrations, updateRegistrationStatus, InstitutionRegistration } from '../src/api';
 
@@ -84,17 +85,20 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return;
+    if (!isAdmin || !address) return;
     
     writeReg({
       address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
       abi: INSTITUTION_REGISTRY_ABI as any,
       functionName: 'registerInstitution',
       args: [newInstitution as `0x${string}`, institutionName],
+      chain: polygonAmoy,
+      account: address,
     });
   };
 
   const handleApproveRegistration = (registration: InstitutionRegistration) => {
+    if (!address) return;
     setSelectedRegistration(registration);
     setNewInstitution(registration.walletAddress);
     setInstitutionName(registration.name);
@@ -104,6 +108,8 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
       abi: INSTITUTION_REGISTRY_ABI as any,
       functionName: 'registerInstitution',
       args: [registration.walletAddress as `0x${string}`, registration.name],
+      chain: polygonAmoy,
+      account: address,
     });
   };
 
@@ -117,13 +123,15 @@ const AdminDashboard: React.FC<{ setPage: (page: string) => void }> = ({ setPage
   };
 
   const handleRemove = (instAddress: string) => {
-    if (!isAdmin) return;
+    if (!isAdmin || !address) return;
     
     writeRemove({
       address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
       abi: INSTITUTION_REGISTRY_ABI as any,
       functionName: 'removeInstitution',
       args: [instAddress as `0x${string}`],
+      chain: polygonAmoy,
+      account: address,
     });
   };
 
