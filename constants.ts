@@ -1,14 +1,16 @@
 // In a real deployment, these would be the addresses of your deployed contracts on Polygon Amoy or Mainnet
 export const REGISTRY_ADDRESS_DEFAULT = "0x4fDc794e30A89421E256EC3F288Fc0fD471fd16E"; 
+export const INSTITUTION_REGISTRY_ADDRESS_DEFAULT = "0x4fDc794e30A89421E256EC3F288Fc0fD471fd16E";
 export const CERTIFICATE_NFT_ADDRESS_DEFAULT = "0x43236A83599Ce79557ad218ca1aF6109B2400d31";
 
 export const INSTITUTION_REGISTRY_ABI = [
-  "function registerInstitution(address _institution) external",
+  "function registerInstitution(address _institution, string memory _name) external",
   "function removeInstitution(address _institution) external",
+  "function getInstitution(address _institution) external view returns (string memory name, bool isActive)",
   "function isAuthorized(address _institution) external view returns (bool)",
   "function owner() external view returns (address)",
   "function getAllInstitutions() external view returns (address[])",
-  "event InstitutionRegistered(address indexed institution)",
+  "event InstitutionRegistered(address indexed institution, string name)",
   "event InstitutionRemoved(address indexed institution)"
 ] as const;
 

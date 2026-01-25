@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
-import { Shield, FileText, CheckCircle, AlertCircle, Calendar, Mail, Download, Hash } from 'lucide-react';
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useConnect } from 'wagmi';
+import React, { useState, useEffect } from 'react';
+import { Shield, FileText, CheckCircle, AlertCircle, Calendar, Mail, Download, Hash, Lock } from 'lucide-react';
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, useConnect, useReadContract } from 'wagmi';
 import { keccak256, toHex, encodePacked } from 'viem';
-import { CERTIFICATE_NFT_ADDRESS_DEFAULT, CERTIFICATE_NFT_ABI } from '../constants';
+import { CERTIFICATE_NFT_ADDRESS_DEFAULT, CERTIFICATE_NFT_ABI, INSTITUTION_REGISTRY_ADDRESS_DEFAULT, INSTITUTION_REGISTRY_ABI } from '../constants';
 
 const IssueCertificate: React.FC = () => {
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
+
+  // Check if the connected address is a registered institution
+  const { data: institutionInfo, isLoading: isCheckingAuth } = useReadContract({
+    address: INSTITUTION_REGISTRY_ADDRESS_DEFAULT as `0x${string}`,
+    abi: INSTITUTION_REGISTRY_ABI,
+    functionName: 'getInstitution',
+    args: [address as `0x${string}`],
+    query: {
+      enabled: !!address,
+    }
+  });
+
+  const isAuthorized = institutionInfo && (institutionInfo as any)[1] === true; // isActive check
 
   // Issuance State
   const { 
@@ -53,13 +66,16 @@ const IssueCertificate: React.FC = () => {
       return;
     }
 
+    if (!isAuthorized) {
+      alert("Unauthorized: Only registered institutions can issue certificates.");
+      return;
+    }
+
     try {
       const enrollmentTimestamp = Math.floor(new Date(formData.enrollmentDate).getTime() / 1000);
       const emailHash = keccak256(toHex(formData.studentEmail));
       const nameHash = keccak256(toHex(formData.studentName));
 
-      // ✅ FIXED: Compute privacy-preserving Data Hash for verification lookup
-      // hash(nameHash + emailHash + course + enrollmentDate)
       const dataHash = keccak256(encodePacked(
         ['bytes32', 'bytes32', 'string', 'uint256'],
         [nameHash, emailHash, formData.course, BigInt(enrollmentTimestamp)]
@@ -92,6 +108,11 @@ const IssueCertificate: React.FC = () => {
       return;
     }
 
+    if (!isAuthorized) {
+      alert("Unauthorized: Only registered institutions can revoke certificates.");
+      return;
+    }
+
     try {
       writeRevoke({
         address: CERTIFICATE_NFT_ADDRESS_DEFAULT as `0x${string}`,
@@ -115,7 +136,7 @@ const IssueCertificate: React.FC = () => {
     const metadata = {
         name: `Certificate: ${formData.course}`,
         description: `Academic Certificate for ${formData.course}`,
-        image: "ipfs://QmPlaceholderImage", // In real app, user uploads image first
+        image: "ipfs://QmPlaceholderImage",
         attributes: [
             { trait_type: "Student Name Hash", value: keccak256(toHex(formData.studentName)) },
             { trait_type: "Course", value: formData.course },
@@ -132,15 +153,43 @@ const IssueCertificate: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  if (isConnected && !isAuthorized && !isCheckingAuth) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+        <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
+          <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="h-8 w-8 text-amber-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">Institution Access Only</h1>
+          <p className="text-slate-600 max-w-md mx-auto mb-8">
+            This dashboard is restricted to authorized educational institutions. 
+            Your wallet address ({address?.slice(0, 6)}...{address?.slice(-4)}) is not currently registered.
+          </p>
+          <div className="flex flex-col gap-4 max-w-xs mx-auto text-sm">
+             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-left">
+                <p className="font-semibold text-slate-700 mb-1">How to gain access?</p>
+                <p className="text-slate-500">Contact the platform administrator to have your institution's wallet address added to the registry.</p>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-slate-900">Institution Dashboard</h1>
         <p className="text-slate-500 mt-2">Issue tamper-proof certificates on the Polygon blockchain.</p>
+        {isAuthorized && institutionInfo && (
+          <div className="mt-4 inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium border border-green-100">
+            <CheckCircle className="h-4 w-4" />
+            {(institutionInfo as any)[0] || 'Registered Institution'}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Issue Form */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-6 text-indigo-600">
             <FileText className="h-6 w-6" />
@@ -240,10 +289,10 @@ const IssueCertificate: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isIssuePending || isIssueConfirming}
+              disabled={isIssuePending || isIssueConfirming || !isAuthorized}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
             >
-              {isIssuePending || isIssueConfirming ? 'Minting...' : 'Mint Certificate'}
+              {!isConnected ? 'Connect Wallet' : isIssuePending || isIssueConfirming ? 'Minting...' : 'Mint Certificate'}
             </button>
             {issueError && (
               <p className="text-red-500 text-sm mt-2">Error: {issueError.message.slice(0, 100)}...</p>
@@ -260,7 +309,6 @@ const IssueCertificate: React.FC = () => {
           </form>
         </div>
 
-        {/* Revoke Form & Status */}
         <div className="space-y-8">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
              <div className="flex items-center gap-2 mb-6 text-red-600">
@@ -292,7 +340,7 @@ const IssueCertificate: React.FC = () => {
               </div>
               <button
                 type="submit"
-                disabled={isRevokePending || isRevokeConfirming}
+                disabled={isRevokePending || isRevokeConfirming || !isAuthorized}
                 className="w-full bg-red-50 hover:bg-red-100 text-red-700 font-semibold py-2 rounded-xl border border-red-200 transition-all disabled:opacity-50"
               >
                 {isRevokePending || isRevokeConfirming ? 'Revoking...' : 'Revoke Permanently'}
