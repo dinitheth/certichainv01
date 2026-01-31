@@ -6,7 +6,7 @@
 ![Solidity](https://img.shields.io/badge/Solidity-363636?style=flat&logo=solidity&logoColor=white)
 ![Polygon](https://img.shields.io/badge/Polygon-8247E5?style=flat&logo=polygon&logoColor=white)
 
-**CertiChain** is a blockchain-based platform designed to issue, verify, and manage academic certificates and transcripts as **Soulbound Tokens (SBTs)**. By leveraging the Polygon network, CertiChain ensures that academic credentials are tamper-proof, instantly verifiable, and owned permanently by the student.
+**CertiChain** is a blockchain-based platform designed to issue, verify, and manage academic certificates and transcripts as **Soulbound Tokens (SBTs)**. By leveraging the Polygon network and PostgreSQL database, CertiChain ensures that academic credentials are tamper-proof, instantly verifiable, and owned permanently by the student.
 
 ---
 
@@ -20,7 +20,9 @@
 - [Tech Stack](#tech-stack)
 - [Smart Contract Design](#smart-contract-design)
 - [Getting Started](#getting-started)
+- [Database Setup](#database-setup)
 - [Usage Guide](#usage-guide)
+- [Recent Updates](#recent-updates)
 
 ---
 
@@ -50,8 +52,11 @@ CertiChain solves this by tokenizing credentials. When an institution issues a c
 
 *   **Soulbound Tokens (SBTs):** Certificates are ERC-721 tokens that **cannot be transferred** between wallets, ensuring that a degree cannot be "sold" to another person.
 *   **Role-Based Access Control:** Only authorized institutions (whitelisted by the Admin) can issue certificates.
+*   **Institution Registration System:** Off-chain registration workflow with approval process before on-chain authorization.
 *   **Privacy-Preserving Verification:** Capability to verify credentials using hashed data (Name + Email + Course) without publicly exposing PII (Personally Identifiable Information) on the UI by default.
-*   **IPFS Integration:** Metadata (images, detailed transcripts) is stored on IPFS (InterPlanetary File System) for decentralized storage efficiency.
+*   **Automated Gas Optimization:** Smart gas limit settings to prevent transaction failures.
+*   **User-Friendly Error Handling:** Clear, actionable error messages instead of technical blockchain errors.
+*   **Real-Time History Monitoring:** Live blockchain event tracking for all certificate actions.
 *   **Revocation Mechanism:** Institutions can revoke certificates in cases of academic dishonesty or administrative error.
 
 ---
@@ -67,7 +72,7 @@ CertiChain solves this by tokenizing credentials. When an institution issues a c
 
 ## System Architecture
 
-The system consists of a React frontend, two core Smart Contracts on Polygon, and IPFS for metadata storage.
+The system consists of a React frontend, a Node.js/Express backend API, PostgreSQL database, and two core Smart Contracts on Polygon.
 
 ```mermaid
 graph TD
@@ -78,33 +83,37 @@ graph TD
         Wagmi[Wagmi / Viem SDK]
     end
 
+    subgraph Backend
+        API[Express API Server]
+        DB[(PostgreSQL Database)]
+    end
+
     subgraph Blockchain [Polygon Network]
         Registry[InstitutionRegistry Contract]
         NFT[CertificateNFT Contract]
     end
 
-    subgraph Storage
-        IPFS[IPFS / Pinata]
-    end
-
     User -->|Interacts| App
     App -->|Connects Wallet| Wagmi
+    App -->|Registration API| API
+    API -->|Stores Data| DB
     Wagmi -->|Read/Write| Registry
     Wagmi -->|Read/Write| NFT
     Registry -->|Authorizes| NFT
-    App -.->|Fetches Metadata| IPFS
     
     %% Relationships
     NFT -->|Mints SBT| User
 ```
 
 ### Data Flow
-1.  **Admin** adds an Institution address to the `InstitutionRegistry`.
-2.  **Institution** creates metadata (JSON), uploads to **IPFS**, and gets a CID.
-3.  **Institution** calls `issueCertificate` on `CertificateNFT`.
-4.  **Contract** checks `InstitutionRegistry` for permission.
-5.  **Contract** mints Soulbound Token to **Student Wallet**.
-6.  **Verifier** queries the blockchain using the Certificate ID or Data Hash.
+1.  **Institution** submits registration request through the frontend.
+2.  **Backend API** stores registration in PostgreSQL with "pending" status.
+3.  **Admin** reviews and approves the registration in the Admin Dashboard.
+4.  **Admin** adds Institution address to the `InstitutionRegistry` on-chain.
+5.  **Institution** can now issue certificates by calling `issueCertificate` on `CertificateNFT`.
+6.  **Contract** checks `InstitutionRegistry` for permission.
+7.  **Contract** mints Soulbound Token to **Student Wallet**.
+8.  **Verifier** queries the blockchain using the Certificate ID or Data Hash.
 
 ---
 
@@ -117,10 +126,17 @@ graph TD
 *   **Icons:** Lucide React
 *   **Build Tool:** Vite
 
+### Backend
+*   **Runtime:** Node.js
+*   **Framework:** Express
+*   **Database:** PostgreSQL (Neon, Supabase, or local)
+*   **ORM:** Drizzle ORM
+*   **Language:** TypeScript
+
 ### Blockchain Interaction
 *   **Library:** Wagmi & Viem (Modern replacements for Ethers.js)
 *   **State Management:** TanStack Query
-*   **Wallet Connection:** Injected Connectors (MetaMask, Rainbow, etc.)
+*   **Wallet Connection:** Injected Connectors (MetaMask, OKX, etc.)
 
 ### Smart Contracts
 *   **Language:** Solidity ^0.8.20
@@ -137,6 +153,7 @@ Acts as the gatekeeper.
 *   **`registerInstitution(address)`**: Whitelists an address.
 *   **`removeInstitution(address)`**: Revokes issuing rights.
 *   **`isAuthorized(address)`**: Returns true/false.
+*   **`getInstitution(address)`**: Returns institution name and active status.
 
 ### 2. CertificateNFT.sol
 The core logic for credentials.
@@ -145,6 +162,7 @@ The core logic for credentials.
 *   **`issueCertificate(...)`**: Mints token. Requires `registry.isAuthorized(msg.sender)`.
 *   **`revokeCertificate(...)`**: Invalidates the struct data without burning the token (audit trail).
 *   **Hashing:** Stores `keccak256` hashes of sensitive data for privacy checks.
+*   **Gas Optimization:** Configured with optimal gas limits (500,000 for issuance, 200,000 for revocation).
 
 ---
 
@@ -152,6 +170,7 @@ The core logic for credentials.
 
 ### Prerequisites
 *   Node.js (v18+)
+*   PostgreSQL database (Neon, Supabase, Railway, or local installation)
 *   MetaMask (Browser Extension)
 *   Polygon Amoy Testnet MATIC (for gas fees)
 
@@ -169,34 +188,173 @@ The core logic for credentials.
     ```
 
 3.  **Configure Environment**
-    Create a `.env` file (optional if hardcoding for verified contracts) or update `constants.ts` with your deployed contract addresses.
+    Create a `.env` file in the root directory:
+    ```env
+    DATABASE_URL=postgresql://username:password@host:port/database?sslmode=require
+    ```
+    Replace with your actual PostgreSQL connection string from Neon, Supabase, or your local database.
 
-4.  **Run Development Server**
+4.  **Setup Database Schema**
+    Push the database schema to your PostgreSQL database:
+    ```bash
+    npm run db:push
+    ```
+    
+    Alternatively, you can run the SQL setup manually:
+    ```bash
+    psql -U your_username -d your_database -f database_setup.sql
+    ```
+
+5.  **Start Backend Server**
+    ```bash
+    npm run server
+    ```
+    The API server will run on `http://localhost:3001`
+
+6.  **Start Frontend Development Server**
     ```bash
     npm run dev
     ```
+    The frontend will run on `http://localhost:5000`
+
+---
+
+## Database Setup
+
+CertiChain uses PostgreSQL to manage institution registrations and optional certificate tracking. The database schema includes:
+
+### Tables
+
+#### 1. institution_registrations
+Stores all institution registration requests with approval workflow.
+*   `id` - Primary key
+*   `name` - Institution name
+*   `email` - Official contact email
+*   `website` - Institution website
+*   `location` - Geographic location
+*   `description` - Brief description
+*   `wallet_address` - Ethereum wallet address (unique)
+*   `status` - pending | approved | rejected
+*   `created_at` - Timestamp of submission
+*   `reviewed_at` - Timestamp of admin review
+
+#### 2. certificates (Optional)
+Off-chain tracking for certificates (blockchain is the source of truth).
+*   `token_id` - NFT token ID
+*   `student_name_hash` - Hashed student name
+*   `student_email_hash` - Hashed student email
+*   `student_wallet` - Student's wallet address
+*   `course` - Degree/course name
+*   `enrollment_date` - Enrollment timestamp
+*   `issuer_wallet` - Institution's wallet
+*   `is_revoked` - Revocation status
+*   `transaction_hash` - Blockchain transaction hash
+
+### Database Providers
+
+You can use any PostgreSQL provider:
+*   **Neon** (Recommended): https://neon.tech - Serverless PostgreSQL
+*   **Supabase**: https://supabase.com - PostgreSQL with additional features
+*   **Railway**: https://railway.app - Simple deployment platform
+*   **Local PostgreSQL**: Traditional self-hosted setup
 
 ---
 
 ## Usage Guide
 
-### 1. Administrator Setup
-1.  Connect wallet (must be the deployer of the Registry).
-2.  Navigate to the **Admin** tab.
-3.  Enter a wallet address to authorize a new Institution (e.g., a University wallet).
+### 1. Institution Registration
+1.  Visit the platform and connect your wallet.
+2.  Navigate to **Register Institution** page.
+3.  Fill in your institution details:
+    - Institution Name
+    - Official Email
+    - Website URL
+    - Location
+    - Brief Description
+4.  Submit the registration request.
+5.  Wait for admin approval (status shown on page).
 
-### 2. Institution Issuance
+### 2. Administrator Approval
+1.  Connect wallet with admin privileges.
+2.  Navigate to the **Admin** tab.
+3.  Review pending institution registrations.
+4.  Approve or reject requests.
+5.  For approved institutions, register their wallet address on-chain using the Registry contract.
+
+### 3. Certificate Issuance
 1.  Connect the wallet authorized in the previous step.
 2.  Navigate to **Institution** tab.
-3.  Fill in Student Name, Course, Email, and Student Wallet Address.
-4.  Generate/Paste IPFS hash.
-5.  Click **Mint Certificate**. Confirm transaction in MetaMask.
+3.  Fill in certificate details:
+    - Student Name (hashed on-chain for privacy)
+    - Student Email (hashed)
+    - Student Wallet Address
+    - Course/Degree Name
+    - Enrollment Date
+4.  Click **Mint Certificate**.
+5.  Confirm transaction in MetaMask (gas fees will be automatically optimized).
+6.  Transaction success confirmation will appear.
 
-### 3. Verification
+### 4. Certificate Verification
 1.  Navigate to **Verify** tab.
-2.  **Mode A (ID):** Enter the Certificate ID (e.g., `1`).
-3.  **Mode B (Privacy):** Enter the exact Student Name, Email, Course, and Date. The app generates a hash locally and queries the blockchain for a match.
-4.  View the status (Valid/Revoked) and metadata.
+2.  **Mode A (By ID):** Enter the Certificate Token ID.
+3.  **Mode B (Privacy Mode):** Enter Student Name, Email, Course, and Date. The app generates a hash locally and queries the blockchain.
+4.  View the certificate status:
+    - ✅ Valid and Active
+    - ❌ Revoked (with reason)
+    - ⚠️ Not Found
+
+### 5. Certificate Revocation
+1.  From the **Institution Dashboard**.
+2.  Enter the Certificate ID to revoke.
+3.  Provide a reason for revocation.
+4.  Confirm the transaction.
+5.  Certificate status is immediately updated on-chain.
+
+### 6. Blockchain History
+1.  Navigate to **History** tab.
+2.  View real-time log of all certificate actions:
+    - Issuance events
+    - Revocation events
+3.  Click transaction links to view on Polygon Explorer.
+
+---
+
+## Recent Updates
+
+### Version 2.0 - Major Improvements
+
+#### Frontend Enhancements
+*   **Redesigned Home Page**: Modern, professional design with enhanced features section
+*   **Wallet-Gated Access**: Institution Dashboard only accessible after wallet connection
+*   **Improved Error Messages**: User-friendly error handling for rejected transactions
+*   **Removed IPFS Requirement**: Simplified issuance flow (uses placeholder)
+
+#### Backend Infrastructure
+*   **PostgreSQL Database**: Complete off-chain data management
+*   **Express API Server**: RESTful API for institution registrations
+*   **Registration Workflow**: Approval system before on-chain authorization
+
+#### Smart Contract Optimization
+*   **Gas Limit Configuration**: Automatic gas optimization to prevent failed transactions
+    - Issuance: 500,000 gas limit
+    - Revocation: 200,000 gas limit
+*   **Enhanced Security**: Input validation and access control improvements
+
+#### Developer Experience
+*   **Environment Variables**: Proper `.env` configuration for database
+*   **Database Migrations**: Drizzle ORM with schema versioning
+*   **SQL Setup Script**: `database_setup.sql` for manual database initialization
+*   **Comprehensive Documentation**: Updated README with setup instructions
+
+### API Endpoints
+
+The backend server provides the following endpoints:
+
+*   `GET /api/registrations` - Get all registrations
+*   `GET /api/registrations/pending` - Get pending registrations
+*   `GET /api/registrations/check/:walletAddress` - Check registration status
+*   `POST /api/registrations` - Submit new registration
+*   `PATCH /api/registrations/:id` - Update registration status (approve/reject)
 
 ---
 
@@ -205,7 +363,49 @@ The core logic for credentials.
 *   **Access Control:** Strictly enforced via `onlyOwner` and `onlyAuthorized` modifiers.
 *   **Data Integrity:** Implements `keccak256` hashing for verification data to prevent tampering.
 *   **Soulbound Enforcement:** All transfer functions strictly revert.
+*   **Database Security:** PostgreSQL with SSL connections and parameterized queries.
+*   **Input Validation:** Comprehensive validation on both frontend and backend.
+*   **Error Handling:** User-friendly messages that don't expose sensitive system information.
 
 ---
 
-Built on Polygon.
+## Troubleshooting
+
+### Common Issues
+
+**Database Connection Error**
+```
+Error: DATABASE_URL must be set
+```
+Solution: Ensure `.env` file exists with valid `DATABASE_URL`
+
+**Transaction Failures with Low Gas**
+Solution: The platform now automatically sets appropriate gas limits. Ensure you have sufficient MATIC for gas fees.
+
+**Wallet Connection Issues**
+Solution: Ensure MetaMask is installed and connected to Polygon Amoy testnet.
+
+**Registration Not Showing**
+Solution: Make sure backend server is running on port 3001.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+Built on Polygon Network with ❤️
+
