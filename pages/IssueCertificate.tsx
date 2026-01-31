@@ -169,6 +169,37 @@ const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPa
     URL.revokeObjectURL(url);
   };
 
+  // Show wallet connection prompt if not connected
+  if (!isConnected) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 px-4 text-center">
+        <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200">
+          <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Shield className="h-8 w-8 text-indigo-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">Connect Your Wallet</h1>
+          <p className="text-slate-600 max-w-md mx-auto mb-8">
+            Please connect your wallet to access the Institution Dashboard and manage certificates.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button 
+              onClick={() => connect({ connector: connectors[0] })}
+              className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
+            >
+              Connect Wallet
+            </button>
+            <button 
+              onClick={() => setPage('home')}
+              className="bg-slate-100 text-slate-700 px-8 py-3 rounded-xl font-semibold hover:bg-slate-200 transition"
+            >
+              Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading while checking
   if (isCheckingAuth || isCheckingDb) {
     return (
