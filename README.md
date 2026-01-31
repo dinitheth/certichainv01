@@ -178,7 +178,7 @@ The core logic for credentials.
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/certichain.git
+    git clone https://github.com/dinitheth/certichainv01.git
     cd certichain
     ```
 
