@@ -197,12 +197,6 @@ const Home: React.FC<Props> = ({ setPage }) => {
               >
                 Start Verification
               </button>
-              <button
-                onClick={() => setPage('issue')}
-                className="bg-indigo-500/30 backdrop-blur-md border border-white/30 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-indigo-500/40 transition"
-              >
-                Contact Sales
-              </button>
             </div>
           </div>
         </div>

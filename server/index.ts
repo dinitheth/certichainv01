@@ -120,6 +120,17 @@ app.get("/api/registrations/check/:walletAddress", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`API Server running on port ${PORT}`);
-});
+
+// Test database connection on startup
+db.select().from(institutionRegistrations).limit(1)
+  .then(() => {
+    console.log("✅ Database connected successfully");
+    app.listen(PORT, () => {
+      console.log(`🚀 API Server running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("❌ Database connection failed:", error);
+    console.error("Check your DATABASE_URL in .env file");
+    process.exit(1);
+  });

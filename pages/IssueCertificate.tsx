@@ -77,6 +77,31 @@ const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPa
   const [issueErrorMsg, setIssueErrorMsg] = useState('');
   const [revokeErrorMsg, setRevokeErrorMsg] = useState('');
 
+  // Clear form after successful issuance
+  useEffect(() => {
+    if (isIssueSuccess) {
+      setFormData({
+        studentName: '',
+        studentEmail: '',
+        studentAddress: '',
+        course: '',
+        enrollmentDate: ''
+      });
+      setIssueErrorMsg('');
+    }
+  }, [isIssueSuccess]);
+
+  // Clear revoke form after successful revocation
+  useEffect(() => {
+    if (isRevokeSuccess) {
+      setRevokeData({
+        id: '',
+        reason: ''
+      });
+      setRevokeErrorMsg('');
+    }
+  }, [isRevokeSuccess]);
+
   const handleIssue = async (e: React.FormEvent) => {
     e.preventDefault();
     setIssueErrorMsg('');
@@ -88,6 +113,13 @@ const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPa
 
     if (!isAuthorized) {
       setIssueErrorMsg("Unauthorized: Only registered institutions can issue certificates.");
+      return;
+    }
+
+    // Validate wallet address format
+    const walletAddress = formData.studentAddress.trim();
+    if (!walletAddress.startsWith('0x') || walletAddress.length !== 42) {
+      setIssueErrorMsg('Invalid wallet address. Please enter a valid Ethereum address (starts with 0x and 42 characters long).');
       return;
     }
 
@@ -106,7 +138,7 @@ const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPa
         abi: CERTIFICATE_NFT_ABI as any,
         functionName: 'issueCertificate',
         args: [
-          formData.studentAddress as `0x${string}`,
+          walletAddress as `0x${string}`,
           nameHash,
           emailHash,
           formData.course,
@@ -124,6 +156,8 @@ const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPa
         setIssueErrorMsg('Transaction cancelled. You rejected the wallet request.');
       } else if (errorMessage.includes('insufficient funds')) {
         setIssueErrorMsg('Insufficient funds to complete the transaction.');
+      } else if (errorMessage.includes('invalid') && errorMessage.includes('address')) {
+        setIssueErrorMsg('Invalid wallet address format. Please check and enter a valid Ethereum address.');
       } else {
         setIssueErrorMsg(`Error: ${errorMessage.slice(0, 100)}`);
       }
@@ -364,7 +398,17 @@ const IssueCertificate: React.FC<{ setPage: (page: string) => void }> = ({ setPa
             {(issueError || issueErrorMsg) && (
               <div className="mt-2 text-red-600 flex items-start gap-2 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>{issueErrorMsg || (issueError?.message.includes('User rejected') || issueError?.message.includes('user rejected') ? 'Transaction cancelled. You rejected the wallet request.' : `Error: ${issueError?.message.slice(0, 100)}`)}</span>
+                <span>
+                  {issueErrorMsg ? issueErrorMsg : 
+                    issueError?.message.includes('User rejected') || issueError?.message.includes('user rejected') ? 
+                      'Transaction cancelled. You rejected the wallet request.' : 
+                    issueError?.message.includes('Address') && issueError?.message.includes('invalid') ?
+                      'Invalid wallet address. Please enter a valid Ethereum address (42 characters, starting with 0x).' :
+                    issueError?.message.includes('hex value') ?
+                      'Invalid wallet address format. Please check the address and try again.' :
+                      `Error: ${issueError?.message.slice(0, 100)}`
+                  }
+                </span>
               </div>
             )}
             {isIssueSuccess && (
