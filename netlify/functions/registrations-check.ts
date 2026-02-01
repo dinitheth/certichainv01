@@ -33,22 +33,43 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   try {
     const db = drizzle(getPool(), { schema: { institutionRegistrations } });
 
-    const registrations = await db
+    // Extract wallet address from path
+    const pathParts = event.path.split('/');
+    const walletAddress = pathParts[pathParts.length - 1];
+    
+    if (!walletAddress || walletAddress === 'registrations-check') {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Wallet address required' }),
+      };
+    }
+
+    const [registration] = await db
       .select()
       .from(institutionRegistrations)
-      .where(eq(institutionRegistrations.status, 'pending'));
+      .where(eq(institutionRegistrations.walletAddress, walletAddress.toLowerCase()))
+      .limit(1);
+
+    if (!registration) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ status: 'not_found' }),
+      };
+    }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(registrations),
+      body: JSON.stringify(registration),
     };
   } catch (error) {
     console.error('Function error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed to fetch pending registrations' }),
+      body: JSON.stringify({ error: 'Failed to check registration' }),
     };
   }
 };
