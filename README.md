@@ -127,11 +127,12 @@ graph TD
 *   **Build Tool:** Vite
 
 ### Backend
+*   **Architecture:** Netlify Serverless Functions
 *   **Runtime:** Node.js
-*   **Framework:** Express
-*   **Database:** PostgreSQL (Neon, Supabase, or local)
+*   **Database:** PostgreSQL (Neon hosted)
 *   **ORM:** Drizzle ORM
 *   **Language:** TypeScript
+*   **Deployment:** Netlify (Frontend + Backend in one deployment)
 
 ### Blockchain Interaction
 *   **Library:** Wagmi & Viem (Modern replacements for Ethers.js)
@@ -179,7 +180,7 @@ The core logic for credentials.
 1.  **Clone the repository**
     ```bash
     git clone https://github.com/dinitheth/certichainv01.git
-    cd certichain
+    cd certichainv01
     ```
 
 2.  **Install dependencies**
@@ -187,12 +188,18 @@ The core logic for credentials.
     npm install
     ```
 
-3.  **Configure Environment**
-    Create a `.env` file in the root directory:
-    ```env
-    DATABASE_URL=postgresql://username:password@host:port/database?sslmode=require
+3.  **Setup PostgreSQL Database**
+    
+    a) Create a free Neon database at https://neon.tech
+    
+    b) Copy your connection string (it looks like):
     ```
-    Replace with your actual PostgreSQL connection string from Neon, Supabase, or your local database.
+    postgresql://user:password@ep-xxx.aws.neon.tech/dbname?sslmode=require
+    ```
+    
+    c) Add to your Netlify environment variables:
+    - Go to Netlify Dashboard → Site settings → Environment variables
+    - Add: `DATABASE_URL` = `your_connection_string`
 
 4.  **Setup Database Schema**
     Push the database schema to your PostgreSQL database:
@@ -200,22 +207,36 @@ The core logic for credentials.
     npm run db:push
     ```
     
-    Alternatively, you can run the SQL setup manually:
+    Or run the SQL setup manually:
     ```bash
     psql -U your_username -d your_database -f database_setup.sql
     ```
 
-5.  **Start Backend Server**
-    ```bash
-    npm run server
-    ```
-    The API server will run on `http://localhost:3001`
-
-6.  **Start Frontend Development Server**
+5.  **Local Development**
     ```bash
     npm run dev
     ```
-    The frontend will run on `http://localhost:5000`
+    The app will run on `http://localhost:5173`
+    
+6.  **Deploy to Netlify**
+    
+    a) Push to GitHub:
+    ```bash
+    git add .
+    git commit -m "Initial deployment"
+    git push origin main
+    ```
+    
+    b) Connect to Netlify:
+    - Go to https://netlify.com
+    - New site from Git → Choose your repo
+    - Build settings are auto-detected from `netlify.toml`
+    
+    c) Add Environment Variable:
+    - Site settings → Environment variables
+    - Add `DATABASE_URL` with your Neon connection string
+    
+    d) Deploy! Your site will be live at `https://your-site.netlify.app`
 
 ---
 
@@ -321,17 +342,27 @@ You can use any PostgreSQL provider:
 
 ## Recent Updates
 
-### Version 2.0 - Major Improvements
+### Version 2.1 - Serverless Architecture (Latest)
+
+#### Infrastructure Overhaul
+*   **Netlify Functions**: Migrated from separate Express server to serverless functions
+*   **Single Deployment**: Frontend and backend now deploy together on Netlify (100% FREE)
+*   **Auto-Scaling**: Serverless functions scale automatically with traffic
+*   **Zero Maintenance**: No server management or monitoring required
+
+#### Previous Updates (Version 2.0)
 
 #### Frontend Enhancements
 *   **Redesigned Home Page**: Modern, professional design with enhanced features section
 *   **Wallet-Gated Access**: Institution Dashboard only accessible after wallet connection
 *   **Improved Error Messages**: User-friendly error handling for rejected transactions
 *   **Removed IPFS Requirement**: Simplified issuance flow (uses placeholder)
+*   **Form Auto-Clear**: Forms automatically clear after successful transactions
+*   **Wallet Validation**: Pre-transaction validation of wallet addresses
 
 #### Backend Infrastructure
-*   **PostgreSQL Database**: Complete off-chain data management
-*   **Express API Server**: RESTful API for institution registrations
+*   **PostgreSQL Database**: Complete off-chain data management with Neon hosting
+*   **Serverless API**: Netlify Functions for all backend operations
 *   **Registration Workflow**: Approval system before on-chain authorization
 
 #### Smart Contract Optimization
@@ -341,20 +372,21 @@ You can use any PostgreSQL provider:
 *   **Enhanced Security**: Input validation and access control improvements
 
 #### Developer Experience
-*   **Environment Variables**: Proper `.env` configuration for database
+*   **Environment Variables**: Proper configuration for database connections
 *   **Database Migrations**: Drizzle ORM with schema versioning
 *   **SQL Setup Script**: `database_setup.sql` for manual database initialization
-*   **Comprehensive Documentation**: Updated README with setup instructions
+*   **Simplified Deployment**: Single-click Netlify deployment with environment variables
 
-### API Endpoints
+### API Endpoints (Netlify Functions)
 
-The backend server provides the following endpoints:
+The serverless backend provides the following endpoints:
 
-*   `GET /api/registrations` - Get all registrations
-*   `GET /api/registrations/pending` - Get pending registrations
-*   `GET /api/registrations/check/:walletAddress` - Check registration status
-*   `POST /api/registrations` - Submit new registration
-*   `PATCH /api/registrations/:id` - Update registration status (approve/reject)
+*   `GET /api/registrations` → `/.netlify/functions/registrations`
+*   `GET /api/registrations/pending` → `/.netlify/functions/registrations-pending`
+*   `GET /api/registrations/check/:walletAddress` → `/.netlify/functions/registrations-check`
+*   `POST /api/registrations` → `/.netlify/functions/registrations`
+
+All functions auto-deploy with your Netlify site. No separate backend hosting required!
 
 ---
 
@@ -363,20 +395,27 @@ The backend server provides the following endpoints:
 *   **Access Control:** Strictly enforced via `onlyOwner` and `onlyAuthorized` modifiers.
 *   **Data Integrity:** Implements `keccak256` hashing for verification data to prevent tampering.
 *   **Soulbound Enforcement:** All transfer functions strictly revert.
-*   **Database Security:** PostgreSQL with SSL connections and parameterized queries.
-*   **Input Validation:** Comprehensive validation on both frontend and backend.
-*   **Error Handling:** User-friendly messages that don't expose sensitive system information.
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Database Connection Error**
+*   **Database Security:**  in Netlify Functions**
 ```
 Error: DATABASE_URL must be set
 ```
+Solution: Add `DATABASE_URL` to Netlify environment variables (Site settings → Environment variables)
+
+**Localhost Registration Not Working**
+Solution: The backend is now serverless on Netlify. For local development, Netlify Functions require the Netlify CLI:
+```bash
+npm install -g netlify-cli
+netlify dev
+```
+
+**Transaction Failures with Low Gas**
+Solution: The platform automatically sets appropriate gas limits. Ensure you have sufficient MATIC for gas fees.
+
+**Wallet Connection Issues**
+Solution: Ensure MetaMask is installed and connected to Polygon Amoy testnet.
+
+**404 on API Calls**
+Solution: Ensure you've deployed to Netlify and added the `DATABASE_URL` environment variable. The functions auto-deploy with your site
 Solution: Ensure `.env` file exists with valid `DATABASE_URL`
 
 **Transaction Failures with Low Gas**
